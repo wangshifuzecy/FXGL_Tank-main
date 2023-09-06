@@ -146,7 +146,8 @@ public class TankApp extends GameApplication {
         onKey(KeyCode.DOWN, this::moveDownAction2);
         onKey(KeyCode.LEFT, this::moveLeftAction2);
         onKey(KeyCode.RIGHT, this::moveRightAction2);
-        onKey(KeyCode.DIGIT0, this::shootAction2);
+        onKey(KeyCode.NUMPAD0, this::shootAction2);
+        onKey(KeyCode.ENTER, this::shootAction2);
         /*
         onKey(KeyCode.UP, ()->playerComponent2.up());
         onKey(KeyCode.DOWN, ()->playerComponent2.down());
@@ -198,7 +199,7 @@ public class TankApp extends GameApplication {
     }
 
     private void moveDownAction() {
-        if (tankIsReady2()) {
+        if (tankIsReady()) {
             playerComponent.down();
         }
     }
