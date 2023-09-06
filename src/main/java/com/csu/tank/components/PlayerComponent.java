@@ -9,6 +9,7 @@ import com.almasb.fxgl.entity.EntityGroup;
 import com.almasb.fxgl.entity.SpawnData;
 import com.almasb.fxgl.entity.component.Component;
 import com.almasb.fxgl.entity.components.BoundingBoxComponent;
+import com.almasb.fxgl.entity.components.IDComponent;
 import com.almasb.fxgl.time.LocalTimer;
 import com.csu.tank.GameConfig;
 import com.csu.tank.GameType;
@@ -27,6 +28,7 @@ public class PlayerComponent extends Component {
     /**
      * 为了防止出现斜向上,斜向下等角度的移动,
      */
+    public static IDComponent id;
     private boolean movedThisFrame = false;
     private double speed = 0;
     private Vec2 velocity = new Vec2();
@@ -130,7 +132,18 @@ public class PlayerComponent extends Component {
             if (!shootTimer.elapsed(GameConfig.PLAYER_SHOOT_DELAY)) {
                 return;
             }
-            spawn("bullet", new SpawnData(getEntity().getCenter().add(-4, -4.5))
+            int x = 0;
+            int y = 0;
+            if(moveDir == Dir.UP){
+                x = -5; y = -24;
+            }else if(moveDir == Dir.DOWN){
+                x = -5; y = 24;
+            }else if(moveDir == Dir.RIGHT){
+                x = 24; y = -5;
+            }else if(moveDir == Dir.LEFT){
+                x = -24; y = -5;
+            }
+            spawn("bullet", new SpawnData(getEntity().getCenter().add(x, y))
                 .put("direction", moveDir.getVector())
                 .put("owner", entity));
             shootTimer.capture();

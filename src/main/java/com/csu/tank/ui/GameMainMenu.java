@@ -27,13 +27,14 @@ import static javafx.scene.input.KeyCode.*;
  * 游戏的主菜单场景
  */
 public class GameMainMenu extends FXGLMenu {
+    private static boolean isP1 = true;
     private static int playerNum  = 1;
     private static boolean isOnline = false;
     private final TranslateTransition tt;
     private final Pane defaultPane;
 
     public GameMainMenu() {
-        super(MenuType.MAIN_MENU);
+        super(MenuType.GAME_MENU);
         Texture texture = texture("ui/logo.png");
         texture.setLayoutX(144);
         texture.setLayoutY(100);
@@ -41,16 +42,20 @@ public class GameMainMenu extends FXGLMenu {
         MainMenuButton singleGameBtn = new MainMenuButton("SINGLE PLAYER GAME", ()->{
             playerNum = 1;
             isOnline = false;
-            System.out.println("playerNum:" + playerNum);
+            System.out.println("single player game start");
             fireNewGame();
         });
         MainMenuButton twoGameBtn = new MainMenuButton("TWO PLAYERS GAME", () ->{
             playerNum = 2;
             isOnline = false;
-            System.out.println("playerNum:" + playerNum);
+            System.out.println("two player game start");
             fireNewGame();
         });
-        MainMenuButton onlineGameBtn = new MainMenuButton("ONLINE GAME", this::onlineGame);
+        MainMenuButton onlineGameBtn = new MainMenuButton("ONLINE GAME", ()-> {
+            System.out.println("onlineGame start");
+            isOnline = true;
+            fireNewGame();
+        });
         MainMenuButton constructBtn = new MainMenuButton("CONSTRUCT", () -> {
             getContentRoot().getChildren().setAll(new ConstructPane());
         });
@@ -95,11 +100,6 @@ public class GameMainMenu extends FXGLMenu {
         getContentRoot().getChildren().setAll(defaultPane);
     }
 
-    private void onlineGame() {
-        isOnline = true;
-        fireNewGame();
-    }
-
     @Override
     public void onCreate() {
         getContentRoot().getChildren().setAll(defaultPane);
@@ -142,4 +142,6 @@ public class GameMainMenu extends FXGLMenu {
     public static boolean getIsOnline(){
         return isOnline;
     }
+
+    public static boolean getIsP1(){ return isP1; }
 }

@@ -7,6 +7,7 @@ import com.almasb.fxgl.physics.CollisionHandler;
 import com.csu.tank.GameType;
 import com.csu.tank.TankApp;
 import com.csu.tank.effects.HelmetEffect;
+import com.csu.tank.ui.GameMainMenu;
 
 import static com.almasb.fxgl.dsl.FXGL.*;
 
@@ -30,13 +31,15 @@ public class BulletPlayerHandler extends CollisionHandler {
         bullet.removeFromWorld();
         HealthIntComponent hp = player.getComponent(HealthIntComponent.class);
         hp.damage(1);
+        //System.out.println("take damage");
         TankApp tankApp = getAppCast();
         if (hp.isZero()) {
             if (!getb("gameOver")) {
                 player.removeFromWorld();
                 inc("liveNum",-1);
-                //set("gameOver", true);
-                //getSceneService().pushSubScene(tankApp.failedSceneLazyValue.get());
+                if(GameMainMenu.getIsOnline()) {
+                    TankApp.onlineOver();
+                }
             }
         }
     }

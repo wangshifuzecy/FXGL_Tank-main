@@ -46,15 +46,14 @@ import static com.almasb.fxgl.dsl.FXGL.*;
  * @author LeeWyatt
  */
 public class TankApp extends GameApplication {
-
-    private Entity player;
-    private Entity player2;
+    private static Entity player;
+    private static Entity player2;
     // 2p
-    private PlayerComponent playerComponent = null;
-    private PlayerComponent playerComponent2 = null;
+    private static PlayerComponent playerComponent = null;
+    private static PlayerComponent playerComponent2 = null;
     private Random random = new Random();
-    public LazyValue<FailedScene> failedSceneLazyValue = new LazyValue<>(FailedScene::new);
-    private LazyValue<SuccessScene> successSceneLazyValue = new LazyValue<>(SuccessScene::new);
+    public static LazyValue<FailedScene> failedSceneLazyValue = new LazyValue<>(FailedScene::new);
+    private static LazyValue<SuccessScene> successSceneLazyValue = new LazyValue<>(SuccessScene::new);
 
     /**
      * 顶部的三个点,用于产生敌军坦克
@@ -73,7 +72,6 @@ public class TankApp extends GameApplication {
      * 定时刷新敌军坦克
      */
     private TimerAction spawnEnemyTimerAction;
-
     @Override
     protected void onPreInit() {
         getSettings().setGlobalSoundVolume(0.5);
@@ -130,11 +128,13 @@ public class TankApp extends GameApplication {
         vars.put("gameOver", false);
         vars.put("spawnPlayer",0); //已召唤的玩家
         vars.put("liveNum",1);//现存玩家数量
+        vars.put("isDead",false);//联机模式中操纵的玩家是否死亡
     }
 
     @Override
     protected void initInput() {
-        onKeyDown(KeyCode.BACK_SPACE, this::skipAction) ;//跳关
+        onKeyDown(KeyCode.BACK_SPACE, TankApp::winAction) ;//胜利
+        onKeyDown(KeyCode.F1, TankApp::loseAction);//失败
 
         onKey(KeyCode.W, this::moveUpAction);
         onKey(KeyCode.S, this::moveDownAction);
@@ -163,11 +163,20 @@ public class TankApp extends GameApplication {
          */
     }
 
-    private void skipAction(){
+    //胜利播片
+    private static void winAction(){
         //System.out.println("skip");
         set("gameOver",true);
         runOnce(
             () -> getSceneService().pushSubScene(successSceneLazyValue.get()),
+            Duration.seconds(1.5));
+    }
+
+    //失败播片
+    private static void loseAction(){
+        set("gameOver",true);
+        runOnce(
+            () -> getSceneService().pushSubScene(failedSceneLazyValue.get()),
             Duration.seconds(1.5));
     }
 
@@ -244,23 +253,18 @@ public class TankApp extends GameApplication {
         getGameWorld().addEntityFactory(new GameEntityFactory());
 
         buildAndStartLevel();
-        getip("destroyedEnemy").addListener((ob, ov, nv) -> {
-            if (nv.intValue() == GameConfig.ENEMY_AMOUNT) {
-                set("gameOver", true);
-                play("Win.wav");
-                runOnce(
-                        () -> getSceneService().pushSubScene(successSceneLazyValue.get()),
-                        Duration.seconds(1.5));
-            }
-        });
-        getip("liveNum").addListener((ob,ov,nv)-> {
-            if (nv.intValue() == 0) {
-                set("gameOver",true);
-                runOnce(
-                    () -> getSceneService().pushSubScene(failedSceneLazyValue.get()),
-                    Duration.seconds(1.5));
-            }
-        });
+        if(!GameMainMenu.getIsOnline()) {
+            getip("destroyedEnemy").addListener((ob, ov, nv) -> {
+                if (nv.intValue() == GameConfig.ENEMY_AMOUNT) {
+                    winAction();
+                }
+            });
+            getip("liveNum").addListener((ob, ov, nv) -> {
+                if (nv.intValue() == 0) {
+                    loseAction();
+                }
+            });
+        }
     }
 
     public void buildAndStartLevel() {
@@ -274,7 +278,12 @@ public class TankApp extends GameApplication {
         Rectangle rect1 = new Rectangle(getAppWidth(), getAppHeight() / 2.0, Color.web("#333333"));
         Rectangle rect2 = new Rectangle(getAppWidth(), getAppHeight() / 2.0, Color.web("#333333"));
         rect2.setLayoutY(getAppHeight() / 2.0);
-        Text text = new Text("STAGE " + geti("level"));
+        Text text = null;
+        if(GameMainMenu.getIsOnline()){
+            text = new Text("GAME START");
+        }else{
+            text = new Text("STAGE " + geti("level"));
+        }
         text.setFill(Color.WHITE);
         text.setFont(new Font(35));
         text.setLayoutX(getAppWidth() / 2.0 - 80);
@@ -291,8 +300,9 @@ public class TankApp extends GameApplication {
         tl.setOnFinished(e -> removeUINode(p1));
 
         PauseTransition pt = new PauseTransition(Duration.seconds(1.5));
+        Text finalText = text;
         pt.setOnFinished(e -> {
-            text.setVisible(false);
+            finalText.setVisible(false);
             tl.play();
             //3. 开始新关卡
             startLevel();
@@ -314,44 +324,51 @@ public class TankApp extends GameApplication {
         set("spawnedEnemy", 0);
         set("spawnPlayer",0);
         set("liveNum", GameMainMenu.getPlayerNum());
-
         expireAction(freezingTimerAction);
         expireAction(spadeTimerAction);
+
+
         //如果关卡是 0 ,那么从用户自定义地图开始游戏
-       if (geti("level")==0){
-           Level level;
-           try {
-               level = new TMXLevelLoader()
-                       .load(new File(GameConfig.CUSTOM_LEVEL_PATH).toURI().toURL(), getGameWorld());
-               getGameWorld().setLevel(level);
-           } catch (MalformedURLException e) {
-               throw new RuntimeException(e);
-           }
+       if(GameMainMenu.getIsOnline()){
+           setLevelFromMap("vs.tmx");
+           player = spawn("player", 24 + 3, 25 * 24);
+           playerComponent = player.getComponent(PlayerComponent.class);
+           player2 = spawn("player", 25 * 24 + 3, 24);
+           playerComponent2 = player2.getComponent(PlayerComponent.class);
+           playerComponent2.getEntity().setRotation(180);
        }else {
-           setLevelFromMap("level" + geti("level") + ".tmx");
+           if (geti("level") == 0) {
+               Level level;
+               try {
+                   level = new TMXLevelLoader()
+                       .load(new File(GameConfig.CUSTOM_LEVEL_PATH).toURI().toURL(), getGameWorld());
+                   getGameWorld().setLevel(level);
+               } catch (MalformedURLException e) {
+                   throw new RuntimeException(e);
+               }
+           } else {
+               setLevelFromMap("level" + geti("level") + ".tmx");
+           }
+           play("start.wav");
+           player = spawn("player", 9 * 24 + 3, 25 * 24);
+           player.getComponent(EffectComponent.class).startEffect(new HelmetEffect());
+           playerComponent = player.getComponent(PlayerComponent.class);
+           if(GameMainMenu.getPlayerNum() == 2) {
+               player2 = spawn("player", 17 * 24 + 3, 25 * 24);
+               player2.getComponent(EffectComponent.class).startEffect(new HelmetEffect());
+               playerComponent2 = player2.getComponent(PlayerComponent.class);
+           }
+           getGameScene().addGameView(new GameView(new InfoPane(), 100));
+           for (int i = 0; i < enemySpawnX.length; i++) {
+               spawn("enemy",
+                   new SpawnData(enemySpawnX[i], 30).put("assentName", "tank/E" + FXGLMath.random(1, 12) + "U.png"));
+               inc("spawnedEnemy", 1);
+           }
+           spawnEnemy();
+           //每局开始玩家坦克都有无敌保护时间
+           //显示信息的UI
+           //首先产生几个敌方坦克
        }
-        play("start.wav");
-        player = spawn("player", 9 * 24 + 3, 25 * 24);
-        player.getComponent(EffectComponent.class).startEffect(new HelmetEffect());
-        playerComponent = player.getComponent(PlayerComponent.class);
-        if(GameMainMenu.getPlayerNum() == 2) {
-            System.out.println("two game start");
-            player2 = spawn("player", 17 * 24 + 3, 25 * 24);
-            player2.getComponent(EffectComponent.class).startEffect(new HelmetEffect());
-            playerComponent2 = player2.getComponent(PlayerComponent.class);
-        }else{
-            System.out.println("single game start");
-        }
-        //每局开始玩家坦克都有无敌保护时间
-        //显示信息的UI
-        getGameScene().addGameView(new GameView(new InfoPane(), 100));
-        //首先产生几个敌方坦克
-        for (int i = 0; i < enemySpawnX.length; i++) {
-            spawn("enemy",
-                    new SpawnData(enemySpawnX[i], 30).put("assentName", "tank/E" + FXGLMath.random(1, 12) + "U.png"));
-            inc("spawnedEnemy", 1);
-        }
-        spawnEnemy();
     }
 
     private void spawnEnemy() {
@@ -459,6 +476,19 @@ public class TankApp extends GameApplication {
                     spawn("brick", new SpawnData(288 + col * 24, 576 + row * 24));
                 }
             }
+        }
+    }
+
+    public static void onlineOver(){
+        set("gameOver", true);
+        if(
+            (GameMainMenu.getIsP1() && player.isActive())
+                ||
+            (!GameMainMenu.getIsP1() && !player.isActive())
+        ){
+            winAction();
+        }else{
+            loseAction();
         }
     }
 

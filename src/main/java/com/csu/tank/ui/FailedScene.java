@@ -34,13 +34,14 @@ public class FailedScene extends SubScene {
             gameOverTexture.setTranslateY(getAppHeight() - gameOverTexture.getHeight() + 24);
             //清理关卡的残留(这里主要是清理声音残留)
             getGameWorld().getEntitiesByType(
-                    GameType.BULLET, GameType.ENEMY, GameType.PLAYER
+                GameType.BULLET, GameType.ENEMY, GameType.PLAYER
             ).forEach(Entity::removeFromWorld);
             getGameController().gotoMainMenu();
         });
         getContentRoot().getChildren().add(gameOverTexture);
 
     }
+
 
     @Override
     public void onCreate() {

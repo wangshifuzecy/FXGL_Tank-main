@@ -10,6 +10,7 @@ import com.almasb.fxgl.entity.EntityFactory;
 import com.almasb.fxgl.entity.SpawnData;
 import com.almasb.fxgl.entity.Spawns;
 import com.almasb.fxgl.entity.components.CollidableComponent;
+import com.almasb.fxgl.entity.components.IDComponent;
 import com.almasb.fxgl.physics.BoundingShape;
 import com.almasb.fxgl.texture.AnimatedTexture;
 import com.almasb.fxgl.texture.AnimationChannel;
@@ -17,6 +18,7 @@ import com.almasb.fxgl.ui.ProgressBar;
 import com.csu.tank.components.EnemyComponent;
 import com.csu.tank.components.FlagViewComponent;
 import com.csu.tank.components.PlayerComponent;
+import com.csu.tank.ui.GameMainMenu;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -171,8 +173,10 @@ public class GameEntityFactory implements EntityFactory {
         Entity owner = data.get("owner");
         CollidableComponent collidableComponent = new CollidableComponent(true);
         //检测碰撞, 忽略同类;Detect collisions, ignore the same type;
-        collidableComponent.addIgnoredType(owner.getType());
-        if (GameType.PLAYER == owner.getType()) {
+        if(!GameMainMenu.getIsOnline()) {
+            collidableComponent.addIgnoredType(owner.getType());
+        }//不是网络则无伤害
+        if(GameType.PLAYER == owner.getType()) {
             int bulletLevel = FXGL.geti("playerBulletLevel");
             if (bulletLevel < GameConfig.PLAYER_BULLET_MAX_LEVEL) {
                 textureStr = "bullet/normal.png";

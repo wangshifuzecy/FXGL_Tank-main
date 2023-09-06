@@ -8,7 +8,6 @@ import javafx.util.Duration;
  * @author LeeWyatt
  */
 public class GameConfig {
-
     private GameConfig() {
     }
 
